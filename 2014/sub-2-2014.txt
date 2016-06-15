@@ -1,0 +1,203 @@
+#include <iostream>
+#include <conio.h>
+
+struct punct
+{
+	char *denumireLocalitate;
+	char *adresa;
+	int nrAngajati;
+	int parcAuto;
+};
+
+punct **incarcaPuncteDeLucru(char *numeFisier, int &n)
+{
+	FILE *f;
+	f = fopen(numeFisier,"r");
+	if (!f)
+		printf("Fisierul nu a putut fi deschis");
+	else
+	{
+		char buffer[30];
+		fscanf(f, "%d", &n);
+		punct **vPuncte = new punct*[n];
+		for (int i = 0; i < n; i++)
+		{
+			vPuncte[i] = new punct;
+			fscanf(f, "%s", buffer);
+			vPuncte[i]->denumireLocalitate = new char[sizeof(buffer) + 1];
+			strcpy(vPuncte[i]->denumireLocalitate, buffer);
+
+			fscanf(f, "%s", buffer);
+			vPuncte[i]->adresa = new char[sizeof(buffer) + 1];
+			strcpy(vPuncte[i]->adresa, buffer);
+			fscanf(f, "%d %d", &vPuncte[i]->nrAngajati, &vPuncte[i]->parcAuto);
+		}
+		return vPuncte;
+	}
+	return NULL;
+}
+
+void afiseazaPuncte(punct **p, int n)
+{
+	for (int i = 0; i < n; i++)
+		printf("%s %s\n", p[i]->denumireLocalitate, p[i]->adresa);
+}
+
+void afiseazaPuncteDupaParcAuto(punct **p, int n)
+{
+	for (int i = 0; i < n; i++)
+		if (p[i]->parcAuto>1 && p[i]->parcAuto<5)
+			printf("%s %s\n", p[i]->denumireLocalitate, p[i]->adresa);
+}
+
+void afiseazaSortat(punct **p, int n)
+{
+	punct *temp,**aux = new punct*[n];
+	int flag;
+	for (int i = 0; i < n; i++)
+		aux[i] = p[i];
+	do{
+		flag = 0;
+		for (int i = 0; i < n - 1; i++)
+		{
+			if (aux[i]->nrAngajati > aux[i + 1]->nrAngajati)
+			{
+				temp = aux[i];
+				aux[i] = aux[i + 1];
+				aux[i + 1] = temp;
+				flag = 1;
+			}
+		}
+	} while (flag == 1);
+	for (int i = 0; i < n; i++)
+		printf("%s %d\n", aux[i]->denumireLocalitate, aux[i]->nrAngajati);
+}
+
+struct nodS
+{
+	char *localitate;
+	nodS *next;
+};
+
+struct nodP
+{
+	punct *p;
+	nodP *next;
+	nodS *listaVecini;
+};
+
+char *pop(nodS *&stiva)
+{
+	nodS *temp = stiva;
+	char *buf = temp->localitate;
+	stiva = stiva->next;
+	delete temp;
+	return buf;
+}
+
+void push(nodS *&stiva, char *localitate)
+{
+	nodS *nou = new nodS;
+	nou->localitate = new char[sizeof(localitate) + 1];
+	strcpy(nou->localitate, localitate);
+	nou->next = stiva;
+	stiva = nou;
+}
+
+punct *cautaVector(punct **p, int n, char *denumire, int &poz)
+{
+	for (int i = 0; i < n; i++)
+	{
+		if (strcmp(p[i]->denumireLocalitate, denumire) == 0)
+		{
+			poz = i;
+			return p[i];
+		}
+	}
+	return NULL;
+}
+
+
+nodP *incarcaGraf(char *numeFisier, punct **p, int n)
+{
+	nodP *rad = NULL;
+	FILE *f;
+	f = fopen(numeFisier, "r");
+	if (!f)
+		printf("Fisierul nu a  putut fi deschis");
+	else
+	{
+		char buffer[30];
+		int dim,k,poz;
+		nodP *temp,*graf = new nodP;
+		fscanf(f, "%d", &dim);
+		for (int i = 0; i < dim; i++)
+		{
+			fscanf(f, "%d", &k);
+			graf = new nodP;
+			graf->next = NULL;
+			graf->listaVecini = NULL;
+			fscanf(f, "%s", buffer);
+			graf->p = cautaVector(p, n, buffer,poz);
+			for (int j = 0; j < k; j++)
+			{
+				fscanf(f, "%s", buffer);
+				push(graf->listaVecini, buffer);
+			}
+			if (i == 0)
+				rad = graf;
+			if (i != 0)
+				temp->next = graf;
+			temp = graf;
+			graf = graf->next;
+		}
+	}
+	return rad;
+}
+
+void parucurgeDF(nodP *graf, punct **p, int n, char *start)
+{
+	int poz,*viz = new int[n];
+	punct *gasit;
+	char buffer[30];
+	nodP *temp = graf;
+	nodS *stiva = NULL;
+	for (int i = 0; i < n; i++)
+		viz[i] = 0;
+	push(stiva, start);
+	while (stiva)
+	{
+		strcpy(buffer,pop(stiva));
+		printf("%s ", buffer);
+		temp = graf;
+		while (temp && (strcmp(temp->p->denumireLocalitate, buffer) != 0))
+			temp = temp->next;
+		nodS *aux = temp->listaVecini;
+		while (aux)
+		{
+			gasit = cautaVector(p, n, aux->localitate, poz);
+			if (viz[poz] == 0)
+			{
+				viz[poz] = 1;
+				push(stiva, aux->localitate);
+			}
+			aux = aux->next;
+		}
+	}
+}
+
+void main()
+{
+	int n;
+	punct **p = incarcaPuncteDeLucru("punctLucru.txt", n);
+	afiseazaPuncte(p, n);
+	printf("\n");
+	afiseazaPuncteDupaParcAuto(p, n);
+	printf("\nAfiseaza sortat:\n");
+	afiseazaSortat(p, n);
+	nodP *graf = incarcaGraf("graf.txt", p, n);
+	printf("Parcurgere adancime :\n");
+	parucurgeDF(graf, p, n, "Bucuresti");
+	printf("\n\n\t\t\t\t!!! Succes !!!");
+	getch();
+}

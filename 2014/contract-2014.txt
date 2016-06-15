@@ -1,0 +1,232 @@
+#include <iostream>
+#include <conio.h>
+#include <time.h>
+
+struct data
+{
+	int an;
+	int luna;
+	int zi;
+};
+
+struct contract
+{
+	char id[10];
+	char *denumireFurnizor;
+	double limitaCredit;
+	int valoareContract;
+	data dataContract;
+};
+
+struct nodLS
+{
+	contract *info;
+	nodLS *next;
+};
+
+void push(nodLS *&p,nodLS *&u, contract *c)
+{
+	nodLS *nou = new nodLS;
+	nou->info = c;
+	nou->next = NULL;
+	if (p == NULL && u == NULL)
+		p = u = nou;
+	else
+	{
+		u->next = nou;
+		u = nou;
+	}
+}
+
+void pop(nodLS *&p, nodLS *&u, contract *&c)
+{
+	nodLS *temp = new nodLS;
+	if (p != NULL)
+	{
+		nodLS *temp = p;
+		p = p->next;
+		c = temp->info;
+		delete temp;
+	}
+	if (p == NULL) u = NULL;
+}
+
+void incarcaLista(nodLS *&p, nodLS *&u, char *numeFisier)
+{
+	FILE *f;
+	f = fopen(numeFisier, "r");
+	if (!f)
+		printf("Fisierul nu a putut fi deschis");
+	else
+	{
+		int n;
+		char buffer[30];
+		fscanf(f, "%d", &n);
+		for (int i = 0; i < n; i++)
+		{
+			contract *nou = new contract;
+			fscanf(f, "%s", nou->id);
+			fscanf(f, "%s", buffer);
+			nou->denumireFurnizor = new char[sizeof(buffer) + 1];
+			strcpy(nou->denumireFurnizor, buffer);
+			fscanf(f, "%lf", &nou->limitaCredit);
+			fscanf(f, "%d", &nou->valoareContract);
+			fscanf(f, "%d %d %d", &nou->dataContract.an, &nou->dataContract.luna, &nou->dataContract.zi);
+			if (nou->limitaCredit > 20000)
+				push(p, u, nou);
+		}
+	}
+}
+
+void afiseazaLista(nodLS *p, nodLS *u)
+{
+	printf("\nLista este urmatoarea :\n");
+	nodLS *temp = p;
+	while (temp)
+	{
+		printf("%s %s\n", temp->info->id, temp->info->denumireFurnizor);
+		temp = temp->next;
+	}
+}
+
+void afiseazaContractLunaTrecuta(nodLS *p, nodLS *u)
+{
+	printf("\nContracte incheiate luna trecuta :\n");
+	time_t t = time(NULL);
+	struct tm *now = localtime(&t);
+
+	nodLS *temp = p;
+	while (temp)
+	{
+		if (temp->info->dataContract.an == (now->tm_year + 1900) && temp->info->dataContract.luna == (now->tm_mon))
+			printf("%s %s\n", temp->info->id, temp->info->denumireFurnizor);
+		temp = temp->next;
+	}
+}
+
+struct nodAVL
+{
+	contract *info;
+	int ge;
+	nodAVL *st, *dr;
+};
+
+int calculEchilibru(nodAVL *a)
+{
+	if (a)
+		return  calculEchilibru(a->dr) - calculEchilibru(a->st);
+	else
+		return 0;
+}
+
+nodAVL *rotireSimplaStanga(nodAVL *pivot, nodAVL *fiuDr)
+{
+	pivot->dr = fiuDr->dr;
+	pivot->ge = calculEchilibru(pivot);
+	fiuDr->st = pivot;
+	fiuDr->ge = calculEchilibru(fiuDr);
+	return fiuDr;
+}
+
+nodAVL *rotireSimplaDreapta(nodAVL *pivot, nodAVL *fiuSt)
+{
+	pivot->st = fiuSt->dr;
+	pivot->ge = calculEchilibru(pivot);
+	fiuSt->dr = pivot;
+	pivot->ge = calculEchilibru(pivot);
+	return fiuSt;
+}
+
+nodAVL *rotireDreaptaStanga(nodAVL *pivot, nodAVL *fiuDr)
+{
+	pivot->dr = rotireSimplaDreapta(fiuDr, fiuDr->st);
+	pivot->ge = calculEchilibru(pivot);
+	fiuDr = pivot->dr;
+	fiuDr = rotireSimplaStanga(pivot, fiuDr);
+	fiuDr->ge = calculEchilibru(fiuDr);
+	return fiuDr;
+}
+
+nodAVL *rotireStangaDreapta(nodAVL *pivot, nodAVL *fiuSt)
+{
+	pivot->st = rotireSimplaStanga(fiuSt, fiuSt->dr);
+	pivot->ge = calculEchilibru(pivot);
+	fiuSt = pivot->st;
+
+	fiuSt = rotireSimplaDreapta(pivot, fiuSt);
+	fiuSt->ge = calculEchilibru(fiuSt);
+	return fiuSt;
+}
+
+nodAVL *inserareArbore(nodAVL *rad, contract *c)
+{
+	if (rad)
+	{
+		if (strcmp(rad->info->id, c->id) == -1)
+			rad->dr = inserareArbore(rad->dr, c);
+		else
+			if (strcmp(rad->info->id, c->id) == 1)
+				rad->st = inserareArbore(rad->st, c);
+			else
+				printf("Eroare - idul exista deja");
+	}
+	else
+	{
+		nodAVL *nou = new nodAVL;
+		nou->info = c;
+		nou->st = nou->dr = NULL;
+		rad = nou;
+	}
+	calculEchilibru(rad);
+	if (rad->ge == 2)
+	{
+		if (rad->st->ge == -1)
+			rad = rotireDreaptaStanga(rad, rad->dr);
+		else
+			rad = rotireSimplaStanga(rad, rad->dr);
+	}
+	else
+		if (rad->ge == -2)
+		{
+			if (rad->dr->ge == 1)
+				rad = rotireStangaDreapta(rad, rad->st);
+			else
+				rad = rotireSimplaDreapta(rad, rad->st);
+		}
+	return rad;
+}
+
+nodAVL *conversieListaArbore(nodLS *p, nodLS *u)
+{
+	nodAVL *rad = NULL;
+	contract *c;
+	while (p)
+	{
+		pop(p, u, c);
+		rad = inserareArbore(rad, c);
+	}
+	return rad;
+}
+
+void parcurgeSRD(nodAVL *rad)
+{
+	if (rad)
+	{
+		parcurgeSRD(rad->st);
+		printf("%s %s    ", rad->info->id, rad->info->denumireFurnizor);
+		parcurgeSRD(rad->dr);
+	}
+}
+
+void main()
+{
+	nodLS *p = NULL, *u = NULL;
+	incarcaLista(p, u, "contract.txt");
+	afiseazaLista(p, u);
+	afiseazaContractLunaTrecuta(p, u);
+	nodAVL *rad = conversieListaArbore(p, u);
+	printf("\nParcurgere SRD:\n");
+	parcurgeSRD(rad);
+	printf("\n\n\t\t\t\t!!!Succes!!!");
+	getch();
+}
