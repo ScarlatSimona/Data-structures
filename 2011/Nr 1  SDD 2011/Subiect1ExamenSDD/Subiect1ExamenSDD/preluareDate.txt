@@ -1,0 +1,4 @@
+100,Vasilescu Ion,1.02.1993,Cibernetica,2,1068
+50,Gigel Ion,23.03.1990,Automatica,1,1034
+300,Popescu Mircea,20.09.1994,Matematica,3,1052
+60,Traian Bogdan,31.05.1993,Medicina,4,1098
