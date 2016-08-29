@@ -1,0 +1,16 @@
+
+Sun May 15 14:20:30 2016
+  list  
+Succesful
+Sun May 15 14:20:39 2016
+  list D:\finalizate  
+Succesful
+Sun May 15 14:21:23 2016
+  list D:\finalizate  
+Succesful
+Sun May 15 14:21:39 2016
+  filter C:\Users\Simi\Desktop\Newfolder -f  
+Succesful
+Sun May 15 14:22:05 2016
+  filter C:\Users\Simi\Desktop\Newfolder -d  
+Succesful
